@@ -85,5 +85,29 @@ def Plot_Trajectory(Body):
                               linewidth   = Body.visual_properties.lineWidth,
                               alpha       = 1,
                               zorder      = 99,
-                              )
-    return TrajectoryPlot
+    )
+    
+    InitialLocation = plt.scatter(  Body.state_properties.stateHistory[0, 0], 
+                                    Body.state_properties.stateHistory[0, 1], 
+                                    label       = Body.name,
+                                    color       = Body.visual_properties.bodyColor, 
+                                    edgecolor   = Body.visual_properties.edgeColor,
+                                    s           = Body.visual_properties.size,
+                                    marker      = Body.visual_properties.icon,
+                                    linewidth   = Body.visual_properties.lineWidth,
+                                    alpha       = 1,
+                                    zorder      = 99,
+    )
+    FinalLocation = plt.scatter(    Body.state_properties.stateHistory[-1, 0], 
+                                    Body.state_properties.stateHistory[-1, 1], 
+                                    label       = Body.name,
+                                    color       = Body.visual_properties.edgeColor, 
+                                    edgecolor   = Body.visual_properties.edgeColor,
+                                    s           = Body.visual_properties.size,
+                                    marker      = Body.visual_properties.icon,
+                                    linewidth   = Body.visual_properties.lineWidth,
+                                    alpha       = 1,
+                                    zorder      = 99,
+    )               
+
+    return TrajectoryPlot, InitialLocation, FinalLocation

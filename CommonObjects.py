@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Optional
 import ColorSchemeObjects as Color_Scheme
+import CommonParameterObjects as CommonParameters
 
 class GeneralObject:
     def __init__(self, name : str):
@@ -34,10 +35,19 @@ class CelestialBody(GeneralObject):
                 
     class StateProperties:
         def __init__(self):
-            self.position:          Optional[np.ndarray]    = None
-            self.velocity:          Optional[np.ndarray]    = None
+            self.position:          np.ndarray              = np.array([])
+            self.velocity:          np.ndarray              = np.array([])
             self.stateHistory:      np.ndarray              = np.array([])
-                
+            self.timeHistory:       np.ndarray              = np.array([])
+        
+        @property
+        def currentStateVector(self):
+            if self.position.any() is None:
+                return None
+            if self.velocity.any() is None:
+                return None
+            return np.concat([self.position, self.velocity])
+    
     class OsculatingProperties:
         def __init__(self):
             self.semi_major_axis: Optional[float] = None
@@ -52,6 +62,12 @@ class CelestialBody(GeneralObject):
             self.mass: Optional[float] = None
             self.radius: Optional[float] = None
 
+        @property
+        def mu(self):
+            if self.mass is None: 
+                raise ValueError("Unset Value Error")
+            return self.mass * CommonParameters.G.parameter_value
+    
     class VisualProperties:
         def __init__(self, ColorScheme):
             self.bodyColor  : Optional[str]   = ColorScheme.bodyColor
@@ -77,32 +93,7 @@ class SpaceVehicle(CelestialBody):
     def __init__(self, name):
         super().__init__(name)
     
-# Types of Propagators
-class Propagator():
-        def __init__(self):
-            self.propagator_name            : Optional[str]         = None
-            self.propagator_source          : Optional[str]         = None
-            self.propagator_description     : Optional[str]         = None
-            self.time_step                  : Optional[float]       = None
-            self.abs_tolerance              : Optional[float]       = None
-            self.rel_tolerance              : Optional[float]       = None 
-            self.body_list                  : list[CelestialBody]   = []
 
-class TwoBodyPropagator(Propagator):
-    def __init__(self):
-        super().__init__()
-        self.propagator_name        = "Two-Body Propagator"
-        self.propagator_source      = None
-        self.propagator_description = "Propagates orbits using the two-body problem solution."
-        self.time_step              = 60.0  # seconds
-        self.abs_tolerance          = 1e-9
-        self.rel_tolerance          = 1e-9
-        self.primary                = self.body_list[0] if self.body_list else None 
-        self.secondary              = self.body_list[1] if len(self.body_list) > 1 else None
-
-    def Propagate(self, state_vector, time_span):
-        # Placeholder for two-body propagation logic
-        pass
 
 
 

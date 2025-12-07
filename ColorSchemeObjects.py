@@ -40,7 +40,7 @@ class ColorScheme:
             lineColor = "#336234"
             textColor = "#336234"
             lineWidth = 1
-            size = 50
+            size = 15
             icon = '>'
         
     class VisualScheme_RetroMilitary:
@@ -58,7 +58,7 @@ class ColorScheme:
             edgeColor = "#CC1100"
             lineColor = "#CC1100"
             textColor = "#CC1100"
-            lineWidth = 1
+            lineWidth = .25
             size = 500
             icon = '.'
 
@@ -68,7 +68,7 @@ class ColorScheme:
             edgeColor = "#CC1100"
             lineColor = "#CC1100"
             textColor = "#CC1100"
-            lineWidth = 1
+            lineWidth = .25
             size = 300
             icon = '.'
 
@@ -78,7 +78,7 @@ class ColorScheme:
             edgeColor = "#4aff00"
             lineColor = "#4aff00"
             textColor = "#4aff00"
-            lineWidth = 1
-            size = 50
-            icon = '>'
+            lineWidth = .25
+            size = 15
+            icon = '^'
       
