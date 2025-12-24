@@ -82,3 +82,18 @@ class ColorScheme:
             size = 15
             icon = '^'
       
+
+    class VisualScheme_Test:
+        
+        ## Colors
+        Green = "#4aff00"
+        Red = "#CC1100"
+        Blue = "#1313C9"
+        Yellow = "#FFCC00"
+        Black = "#000000"
+        White = "#FFFFFF"
+
+        ## Sizes
+        sizeSmall = 15
+        sizeMedium = 300
+        sizeLarge = 500

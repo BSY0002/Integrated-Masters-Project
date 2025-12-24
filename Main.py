@@ -1,68 +1,96 @@
+import ForceModels 
+import IntegratorModels
+import TimeModule 
 import numpy as np
-import CommonObjects as CommonObjects
 import matplotlib.pyplot as plt
-import PlottingObjects as Plotting_Objects
-import ColorSchemeObjects as Color_Scheme
-import PropagatorObjects as Propagator_Objects
+import UnitTestModule
+import PropagatorModels
+import ObjectModels
+import PlottingObjects
 
+# Create Simulation Settings
+TimeElement = TimeModule.Time()
 
-# Example
-System = CommonObjects.SystemObject("Earth-Satellite System")
+# Create Planetary Objects
+Earth = ObjectModels.Earth()
+Moon = ObjectModels.Moon()
 
-# Define the Earth
-Earth = CommonObjects.Planet("Earth")
-Earth.state_properties.position = np.array([0.0, 0.0, 0.0])
-Earth.state_properties.velocity = np.array([0.0, 0.0, 0.0])
-Earth.physical_properties.mass = 5.972e24  # kg
-Earth.physical_properties.radius = 6371.0  # km
-Earth.visual_properties.setColorScheme(Color_Scheme.ColorScheme.VisualScheme_RetroMilitary.Primary)
+# Create Test Space Vehicles
+SpaceVehicle_RK4 = ObjectModels.TestSpaceVehicle()
+SpaceVehicle_RK4.name = "RK4 Test Vehicle"
 
-# Define the Moon
-Moon = CommonObjects.Planet("Moon")
-Moon.state_properties.position = np.array([384400.0, 0.0, 0.0])  # km
-Moon.state_properties.velocity = np.array([0.0, 1.022, 0.0])  # km/s
-Moon.physical_properties.mass = 7.342e22  # kg
-Moon.physical_properties.radius = 1737.1  # km
-Moon.visual_properties.setColorScheme(Color_Scheme.ColorScheme.VisualScheme_RetroMilitary.Secondary)
+SpaceVehicle_DOPI5 = ObjectModels.TestSpaceVehicle()
+SpaceVehicle_DOPI5.name = "DOPI5 Test Vehicle"
 
-# Define the Test Satellite
-Satellite1 = CommonObjects.SpaceVehicle("Satellite")
-Satellite1.state_properties.position = np.array([7000.0, 0.0, 0.0])
-Satellite1.state_properties.velocity = np.array([0.0, 7.5, 0.0]) 
-Satellite1.visual_properties.setColorScheme(Color_Scheme.ColorScheme.VisualScheme_RetroMilitary.Tertiary)
+# Define Forces
+pm = ForceModels.PointMassGravity(Earth.PhysicalProperties.mu)
+j2 = ForceModels.J2Gravity(Earth.PhysicalProperties.mu, 
+                           Earth.PhysicalProperties.radius, 
+                           Earth.PhysicalProperties.J2)
 
-# Define the Propagator
-TwoBodyPropagator = Propagator_Objects.TwoBodyPropagator()
-TwoBodyPropagator.body_list = [Earth, Satellite1]
-TwoBodyPropagator.time_vector = np.array([0, 3600])  # 1 hour propagation
-TwoBodyPropagator.Propagate()
+# Concatenate Forces
+Dynamics = IntegratorModels.Dynamics([pm])
 
-# Plotting
-Figure1 = Plotting_Objects.FigureObject()
-Figure1.setColorScheme(Color_Scheme.ColorScheme.VisualScheme_RetroMilitary.Figure)
-Plotting_Objects.Plot_Body(Earth)
-Plotting_Objects.Plot_Trajectory(Satellite1)
+# Run DOPI5
+integrator_DOPI5 = IntegratorModels.DOPRI5Integrator()
+SpaceVehicle_DOPI5.StateProperties.stateHistory = PropagatorModels.Propagate(SpaceVehicle_DOPI5.StateProperties.state, TimeElement, integrator_DOPI5, Dynamics)
 
+# Run RK4
+integrator_RK4 = IntegratorModels.RK4Integrator()
+SpaceVehicle_RK4.StateProperties.stateHistory = PropagatorModels.Propagate(SpaceVehicle_RK4.StateProperties.state, TimeElement, integrator_RK4, Dynamics)
 
-# Define the second Test Satellite
-Satellite2 = CommonObjects.SpaceVehicle("Satellite2")
-Satellite2.state_properties.position = np.array([46128.00000000, 0.00000000, 0.00000000])
-Satellite2.state_properties.velocity = np.array([0.00000000, 3.56542303, 0.00000000]) 
+# Run Unit Test
+state_UnitTest_history = UnitTestModule.TwoBodyPropagationTest()
 
-Satellite2.visual_properties.setColorScheme(Color_Scheme.ColorScheme.VisualScheme_RetroMilitary.Tertiary)
+# Test Plots
+fig, ax = plt.subplots()
+RK4 = ax.scatter(           SpaceVehicle_RK4.StateProperties.stateHistory[:, 0], 
+                            SpaceVehicle_RK4.StateProperties.stateHistory[:, 1],
+                            linewidth   = 1,
+                            alpha       = 1,
+                            zorder      = 99,
+                            color       = 'blue',
+                            s        = .1
+)
+DOR = ax.scatter(           SpaceVehicle_DOPI5.StateProperties.stateHistory[:, 0], 
+                            SpaceVehicle_DOPI5.StateProperties.stateHistory[:, 1],
+                            linewidth   = 1,
+                            alpha       = 1,
+                            zorder      = 99,
+                            color       = 'red',
+                            s        = .1
+)
 
-# Define CR3BP Propagator
-ThreeBodyPropagator = Propagator_Objects.CircularRestrictedThreeBodyPropagator()
-ThreeBodyPropagator.body_list = [Earth, Moon, Satellite2]
-ThreeBodyPropagator.time_vector = np.linspace(0, 500*86400, 1000)  # 1 day propagation
-ThreeBodyPropagator.Propagate()
+UnitTest = ax.scatter(      state_UnitTest_history[:, 0], 
+                            state_UnitTest_history[:, 1],
+                            linewidth   = 1,
+                            alpha       = 1,
+                            zorder      = 99,
+                            color       = 'green',
+                            s        = .1
+)
+plt.grid(True)
 
-Figure2 = Plotting_Objects.FigureObject()
-Figure2.setColorScheme(Color_Scheme.ColorScheme.VisualScheme_RetroMilitary.Figure)
-Plotting_Objects.Plot_Trajectory(Satellite2)
-Plotting_Objects.Plot_Body(Earth)
-Plotting_Objects.Plot_Body(Moon)
+# Error Plot
+Error_RK4 = SpaceVehicle_RK4.StateProperties.stateHistory - state_UnitTest_history
+Error_DOPI5 = SpaceVehicle_DOPI5.StateProperties.stateHistory - state_UnitTest_history
 
+fig, axes = plt.subplots(1, 3, sharey=True)
 
+axes[0].plot(np.arange(len(Error_RK4)), Error_RK4[:, 0], color = 'blue')
+axes[0].plot(np.arange(len(Error_DOPI5)), Error_DOPI5[:, 0], color = 'red')
+axes[0].set_title("X Error")
+axes[0].grid(True)
 
+axes[1].plot(np.arange(len(Error_RK4)), Error_RK4[:, 1], color = 'blue')
+axes[1].plot(np.arange(len(Error_DOPI5)), Error_DOPI5[:, 1], color = 'red')
+axes[1].set_title("Y Error")
+axes[1].grid(True)
+
+axes[2].plot(np.arange(len(Error_RK4)), Error_RK4[:, 2], color = 'blue')
+axes[2].plot(np.arange(len(Error_DOPI5)), Error_DOPI5[:, 2], color = 'red')
+axes[2].set_title("Z Error")
+axes[2].grid(True)
+
+plt.tight_layout()
 plt.show()
