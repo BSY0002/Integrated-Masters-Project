@@ -6,9 +6,7 @@ class GeneralObject:
     def __init__(self, name : str):
         self.name : str = name
         self.description : Optional[str] = None
-
-
-
+        
 ## Celestial Body Classes ##
 class CelestialBody(GeneralObject):
     def __init__(self, name):
@@ -40,6 +38,7 @@ class Earth(Planet):
         self.StateProperties.position = np.array([0, 0, 0])
         self.StateProperties.velocity = np.array([0, 0, 0])
         self.StateProperties.acceleration = np.array([0, 0, 0])
+
 
         ## Set the Visual Properties ##
 
@@ -86,7 +85,13 @@ class PhysicalProperties():
 
 class VisualProperties():
     def __init__(self):
-        pass
+        self.bodyColor = "#000000"
+        self.edgeColor = "#CC1100"
+        self.lineColor = "#CC1100"
+        self.textColor = "#CC1100"
+        self.lineWidth = .25
+        self.size = 500
+        self.icon = '.'
 
 class StateProperties():
     def __init__(self):

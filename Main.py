@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import UnitTestModule
 import PropagatorModels
 import ObjectModels
-import PlottingObjects
+import ColorSchemeObjects
+import StandardPlots
 
 # Create Simulation Settings
 TimeElement = TimeModule.Time()
@@ -14,6 +15,8 @@ TimeElement = TimeModule.Time()
 # Create Planetary Objects
 Earth = ObjectModels.Earth()
 Moon = ObjectModels.Moon()
+
+
 
 # Create Test Space Vehicles
 SpaceVehicle_RK4 = ObjectModels.TestSpaceVehicle()
@@ -43,6 +46,16 @@ SpaceVehicle_RK4.StateProperties.stateHistory = PropagatorModels.Propagate(Space
 state_UnitTest_history = UnitTestModule.TwoBodyPropagationTest()
 
 # Test Plots
+
+# Create a Color Scheme
+Scheme = ColorSchemeObjects.VisualScheme_Default()
+Fig = StandardPlots.FigureObject(Scheme)
+StandardPlots.Plot_Body(Earth)
+StandardPlots.Plot_Trajectory(SpaceVehicle_RK4)
+StandardPlots.Plot_Trajectory(SpaceVehicle_DOPI5)
+
+
+
 fig, ax = plt.subplots()
 RK4 = ax.scatter(           SpaceVehicle_RK4.StateProperties.stateHistory[:, 0], 
                             SpaceVehicle_RK4.StateProperties.stateHistory[:, 1],

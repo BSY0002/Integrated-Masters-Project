@@ -1,16 +1,14 @@
 import matplotlib.pyplot as plt
-import ColorSchemeObjects as Color_Scheme
 from matplotlib.animation import FuncAnimation
-
 
 # Types of Figures and Plots
 class FigureObject:
-    def __init__(self, ColorScheme = Color_Scheme.ColorScheme.VisualScheme_Default.Figure):        
-        self.background_color   : str     = ColorScheme.backgroundColor
-        self.grid_Color         : str     = ColorScheme.gridColor
-        self.axis_Color         : str     = ColorScheme.axisColor
-        self.text_Color         : str     = ColorScheme.textColor
-        self.line_width         : float   = ColorScheme.lineWidth
+    def __init__(self, ColorScheme):        
+        self.background_color   : str     = ColorScheme.Figure.backgroundColor
+        self.grid_Color         : str     = ColorScheme.Figure.gridColor
+        self.axis_Color         : str     = ColorScheme.Figure.axisColor
+        self.text_Color         : str     = ColorScheme.Figure.textColor
+        self.line_width         : float   = ColorScheme.Figure.lineWidth
         self.axis_equal         : bool    = False
         self.grid               : bool    = True
         self.title              : str     = "Default Title"
@@ -25,11 +23,11 @@ class FigureObject:
 
 
     def setColorScheme(self, ColorScheme):
-        self.background_color    = ColorScheme.backgroundColor
-        self.grid_Color          = ColorScheme.gridColor
-        self.axis_Color          = ColorScheme.axisColor
-        self.text_Color          = ColorScheme.textColor
-        self.line_width          = ColorScheme.lineWidth
+        self.background_color    = ColorScheme.Figure.backgroundColor
+        self.grid_Color          = ColorScheme.Figure.gridColor
+        self.axis_Color          = ColorScheme.Figure.axisColor
+        self.text_Color          = ColorScheme.Figure.textColor
+        self.line_width          = ColorScheme.Figure.lineWidth
         
         self.ax.set_facecolor(self.background_color)
         self.ax.set_title(self.title, color=self.text_Color)
@@ -60,53 +58,54 @@ class FigureObject:
                 linewidth   =   self.line_width / 2, 
                 alpha       =   0.5)
 
-        if self.axis_equal:
-            self.ax.set_aspect('equal', adjustable='box')
+        #if self.axis_equal:
+        self.ax.set_aspect('equal', adjustable='box')
             
 
 def Plot_Body(Body):
-    BodyPlot = plt.scatter(Body.state_properties.position[0], 
-                           Body.state_properties.position[1], 
+    BodyPlot = plt.scatter(Body.StateProperties.position[0], 
+                           Body.StateProperties.position[1], 
                                 label       = Body.name,
-                                color       = Body.visual_properties.bodyColor, 
-                                edgecolor   = Body.visual_properties.edgeColor,
-                                s           = Body.visual_properties.size,
-                                marker      = Body.visual_properties.icon,
-                                linewidth   = Body.visual_properties.lineWidth,
+                                color       = Body.VisualProperties.bodyColor, 
+                                edgecolor   = Body.VisualProperties.edgeColor,
+                                s           = Body.VisualProperties.size,
+                                marker      = Body.VisualProperties.icon,
+                                linewidth   = Body.VisualProperties.lineWidth,
                                 alpha       = 1,
                                 zorder      = 99,
                      )
     return BodyPlot
 
+
 def Plot_Trajectory(Body):
-    TrajectoryPlot = plt.plot(Body.state_properties.stateHistory[:, 0], 
-                              Body.state_properties.stateHistory[:, 1],
+    TrajectoryPlot = plt.plot(Body.StateProperties.stateHistory[:, 0], 
+                              Body.StateProperties.stateHistory[:, 1],
                               label       = f"{Body.name} Trajectory",
-                              color       = Body.visual_properties.lineColor,
-                              linewidth   = Body.visual_properties.lineWidth,
+                              color       = Body.VisualProperties.lineColor,
+                              linewidth   = Body.VisualProperties.lineWidth,
                               alpha       = 1,
                               zorder      = 99,
     )
-    
-    InitialLocation = plt.scatter(  Body.state_properties.stateHistory[0, 0], 
-                                    Body.state_properties.stateHistory[0, 1], 
+
+    InitialLocation = plt.scatter(  Body.StateProperties.stateHistory[0, 0],
+                                    Body.StateProperties.stateHistory[0, 1], 
                                     label       = Body.name,
-                                    color       = Body.visual_properties.bodyColor, 
-                                    edgecolor   = Body.visual_properties.edgeColor,
-                                    s           = Body.visual_properties.size,
-                                    marker      = Body.visual_properties.icon,
-                                    linewidth   = Body.visual_properties.lineWidth,
+                                    color       = Body.VisualProperties.bodyColor, 
+                                    edgecolor   = Body.VisualProperties.edgeColor,
+                                    s           = Body.VisualProperties.size,
+                                    marker      = Body.VisualProperties.icon,
+                                    linewidth   = Body.VisualProperties.lineWidth,
                                     alpha       = 1,
                                     zorder      = 99,
     )
-    FinalLocation = plt.scatter(    Body.state_properties.stateHistory[-1, 0], 
-                                    Body.state_properties.stateHistory[-1, 1], 
+    FinalLocation = plt.scatter(    Body.StateProperties.stateHistory[-1, 0], 
+                                    Body.StateProperties.stateHistory[-1, 1], 
                                     label       = Body.name,
-                                    color       = Body.visual_properties.edgeColor, 
-                                    edgecolor   = Body.visual_properties.edgeColor,
-                                    s           = Body.visual_properties.size,
-                                    marker      = Body.visual_properties.icon,
-                                    linewidth   = Body.visual_properties.lineWidth,
+                                    color       = Body.VisualProperties.edgeColor, 
+                                    edgecolor   = Body.VisualProperties.edgeColor,
+                                    s           = Body.VisualProperties.size,
+                                    marker      = Body.VisualProperties.icon,
+                                    linewidth   = Body.VisualProperties.lineWidth,
                                     alpha       = 1,
                                     zorder      = 99,
     )               

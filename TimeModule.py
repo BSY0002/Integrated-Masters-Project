@@ -4,7 +4,7 @@ class Time:
     def __init__(self):
         self.TimeFrame = 'UTC'
         self.startTime = 0
-        self.endTime = 1000
+        self.endTime = 5550
         self.currentTime = 0
         self.timeStep = 1
         self.absoluteTolerance = 0.001

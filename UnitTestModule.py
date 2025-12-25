@@ -7,8 +7,8 @@ import PropagatorModels
 
 def TwoBodyPropagationTest():
     # THIS WILL BE DEFINED ELSE WHERE : Define State Elements
-    r0 = np.array([7000e3, 0, 0])
-    v0 = np.array([0, 7500, 0])    
+    r0 = np.array([6771e3, 0, 0])
+    v0 = np.array([0, 7672.6, 0])    
     State = np.hstack((r0, v0))
 
     # THIS WILL BE DEFINED ELSE WHERE : Define Time Elements
