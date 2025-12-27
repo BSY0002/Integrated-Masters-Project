@@ -52,15 +52,19 @@ class DOPRI5Integrator:
 
         return new_state
 
-
 class Dynamics:
     def __init__(self, forces):
         self.forces = forces
 
     def __call__(self, state, time):
-        dxdt = np.zeros_like(state)
+        if state.shape[0] != 6:
+            raise ValueError("State vector must be length 6 [r, v]")
 
+        r = state[0:3]
+        v = state[3:6]
+        a = np.zeros(3)
+        
         for force in self.forces:
-            dxdt += force.dxdt(state, time)
+            a += force.accel(r, v, time)
 
-        return dxdt
+        return np.hstack((v, a))

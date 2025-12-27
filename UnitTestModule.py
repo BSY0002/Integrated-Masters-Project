@@ -1,28 +1,31 @@
 ## Unit Tests
 import ForceModels 
 import IntegratorModels
+import ObjectModels
 import TimeModule 
-import numpy as np
 import PropagatorModels
 
-def TwoBodyPropagationTest():
-    # THIS WILL BE DEFINED ELSE WHERE : Define State Elements
-    r0 = np.array([6771e3, 0, 0])
-    v0 = np.array([0, 7672.6, 0])    
-    State = np.hstack((r0, v0))
-
-    # THIS WILL BE DEFINED ELSE WHERE : Define Time Elements
-    TimeElement = TimeModule.Time()
-
-    # Define Constants
-    mu_earth = 3.986004418e14
+def TwoBodyPropagationTest(PrimaryBody = ObjectModels.Earth(), TimeElement = TimeModule.Time()):
+# Create Test Space Vehicles
+    UnitTestSpaceVehicle = ObjectModels.TestSpaceVehicle()
+    UnitTestSpaceVehicle.name = "Unit Test Vehicle"
 
     # Define Forces
-    pm = ForceModels.PointMassGravity(mu_earth)
+    pm = ForceModels.PointMassGravity(PrimaryBody)
 
     # Concatenate Forces
     Dynamics = IntegratorModels.Dynamics([pm])
-    integrator_RK4 = IntegratorModels.RK4Integrator()
 
-    StateHistory = PropagatorModels.Propagate(State, TimeElement, integrator_RK4, Dynamics)
-    return StateHistory
+    # Run RK4
+    integrator_RK4 = IntegratorModels.RK4Integrator()
+    UnitTestSpaceVehicle.StateProperties.stateHistory = PropagatorModels.Propagate(UnitTestSpaceVehicle.StateProperties.state, TimeElement, integrator_RK4, Dynamics)
+    
+    UnitTestSpaceVehicle.VisualProperties.bodyColor = "#000000"
+    UnitTestSpaceVehicle.VisualProperties.edgeColor = "#CC1100"
+    UnitTestSpaceVehicle.VisualProperties.lineColor = "#CC1100"
+    UnitTestSpaceVehicle.VisualProperties.textColor = "#CC1100"
+    UnitTestSpaceVehicle.VisualProperties.lineWidth = .25
+    UnitTestSpaceVehicle.VisualProperties.size = 15
+    UnitTestSpaceVehicle.VisualProperties.icon = '^'
+
+    return UnitTestSpaceVehicle

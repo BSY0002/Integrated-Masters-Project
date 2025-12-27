@@ -4,10 +4,12 @@ class Time:
     def __init__(self):
         self.TimeFrame = 'UTC'
         self.startTime = 0
-        self.endTime = 5550
+        self.endTime = 2551442
         self.currentTime = 0
-        self.timeStep = 1
+        self.timeStep = 10
         self.absoluteTolerance = 0.001
         self.relativeTolerance = 0.01
         self.duration = self.endTime - self.startTime
         self.timeVector = np.arange(self.startTime, self.endTime + self.timeStep, self.timeStep)
+        self.NumCalculations = len(self.timeVector)
+        print("Number of Calculations : ", self.NumCalculations, "...\n")

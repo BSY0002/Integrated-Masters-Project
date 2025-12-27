@@ -1,4 +1,3 @@
-
 class VisualScheme_Light:
     name = "Light"
     class Figure:

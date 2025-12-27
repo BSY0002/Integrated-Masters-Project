@@ -58,13 +58,13 @@ class FigureObject:
                 linewidth   =   self.line_width / 2, 
                 alpha       =   0.5)
 
-        #if self.axis_equal:
-        self.ax.set_aspect('equal', adjustable='box')
+        if self.axis_equal:
+            self.ax.set_aspect('equal', adjustable='box')
             
 
 def Plot_Body(Body):
-    BodyPlot = plt.scatter(Body.StateProperties.position[0], 
-                           Body.StateProperties.position[1], 
+    BodyPlot = plt.scatter(Body.StateProperties.stateHistory[0, 0], 
+                           Body.StateProperties.stateHistory[0, 1], 
                                 label       = Body.name,
                                 color       = Body.VisualProperties.bodyColor, 
                                 edgecolor   = Body.VisualProperties.edgeColor,
@@ -101,7 +101,7 @@ def Plot_Trajectory(Body):
     FinalLocation = plt.scatter(    Body.StateProperties.stateHistory[-1, 0], 
                                     Body.StateProperties.stateHistory[-1, 1], 
                                     label       = Body.name,
-                                    color       = Body.VisualProperties.edgeColor, 
+                                    color       = Body.VisualProperties.bodyColor, 
                                     edgecolor   = Body.VisualProperties.edgeColor,
                                     s           = Body.VisualProperties.size,
                                     marker      = Body.VisualProperties.icon,
@@ -112,7 +112,8 @@ def Plot_Trajectory(Body):
 
     return TrajectoryPlot, InitialLocation, FinalLocation
 
-# ...existing code...
+
+
 def Animate_Trajectories(bodies, Figure_Object, duration_sec=10, interval_ms=50):
     """
     Animate one or more bodies. `bodies` can be a single body or a list of bodies.
@@ -191,4 +192,3 @@ def Animate_Trajectories(bodies, Figure_Object, duration_sec=10, interval_ms=50)
         repeat=True
     )
     return ani
-# ...existing code...
