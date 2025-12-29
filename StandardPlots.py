@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import numpy as np
 
 # Types of Figures and Plots
 class FigureObject:
@@ -9,7 +10,7 @@ class FigureObject:
         self.axis_Color         : str     = ColorScheme.Figure.axisColor
         self.text_Color         : str     = ColorScheme.Figure.textColor
         self.line_width         : float   = ColorScheme.Figure.lineWidth
-        self.axis_equal         : bool    = False
+        self.axis_equal         : bool    = True
         self.grid               : bool    = True
         self.title              : str     = "Default Title"
     
@@ -76,7 +77,6 @@ def Plot_Body(Body):
                      )
     return BodyPlot
 
-
 def Plot_Trajectory(Body):
     TrajectoryPlot = plt.plot(Body.StateProperties.stateHistory[:, 0], 
                               Body.StateProperties.stateHistory[:, 1],
@@ -87,108 +87,118 @@ def Plot_Trajectory(Body):
                               zorder      = 99,
     )
 
-    InitialLocation = plt.scatter(  Body.StateProperties.stateHistory[0, 0],
-                                    Body.StateProperties.stateHistory[0, 1], 
-                                    label       = Body.name,
-                                    color       = Body.VisualProperties.bodyColor, 
-                                    edgecolor   = Body.VisualProperties.edgeColor,
-                                    s           = Body.VisualProperties.size,
-                                    marker      = Body.VisualProperties.icon,
-                                    linewidth   = Body.VisualProperties.lineWidth,
-                                    alpha       = 1,
-                                    zorder      = 99,
-    )
-    FinalLocation = plt.scatter(    Body.StateProperties.stateHistory[-1, 0], 
-                                    Body.StateProperties.stateHistory[-1, 1], 
-                                    label       = Body.name,
-                                    color       = Body.VisualProperties.bodyColor, 
-                                    edgecolor   = Body.VisualProperties.edgeColor,
-                                    s           = Body.VisualProperties.size,
-                                    marker      = Body.VisualProperties.icon,
-                                    linewidth   = Body.VisualProperties.lineWidth,
-                                    alpha       = 1,
-                                    zorder      = 99,
-    )               
+    return TrajectoryPlot
 
-    return TrajectoryPlot, InitialLocation, FinalLocation
+def Animate_Trajectories(bodies, Figure_Object):
 
-
-
-def Animate_Trajectories(bodies, Figure_Object, duration_sec=10, interval_ms=50):
-    """
-    Animate one or more bodies. `bodies` can be a single body or a list of bodies.
-    Each body must have state_properties.stateHistory as an (N,6) array (x,y,...) or (N,2) at minimum.
-    """
     if not isinstance(bodies, (list, tuple)):
         bodies = [bodies]
 
-    # resolve axis from Figure_Object
-    if hasattr(Figure_Object, "ax"):
-        ax = Figure_Object.ax
-    elif hasattr(Figure_Object, "axes"):
-        ax = Figure_Object.axes[0]
-    elif hasattr(Figure_Object, "figure") and Figure_Object.figure.axes:
-        ax = Figure_Object.figure.axes[0]
-    else:
-        import matplotlib.pyplot as plt
-        ax = plt.gca()
+    ax = Figure_Object.ax
+    fig = Figure_Object.figure
 
-    # Validate and compute lengths
-    histories = []
-    for b in bodies:
-        hist = getattr(b.state_properties, "stateHistory", None)
-        if hist is None or len(hist) == 0:
-            raise ValueError(f"Body '{b.name}' has no stateHistory to animate")
-        histories.append(hist)
+    # -------------------------------------------------
+    # GLOBAL ANIMATION TIME (decoupled from simulation)
+    # -------------------------------------------------
+    t_start = max(b.StateProperties.times[0] for b in bodies)
+    t_end   = min(b.StateProperties.times[-1] for b in bodies)
 
-    num_points = max(len(h) for h in histories)
-    target_frames = max(1, (duration_sec * 1000) // max(1, interval_ms))
-    frame_step = max(1, num_points // target_frames)
-    num_frames = (num_points + frame_step - 1) // frame_step
-
-    # create artists for each body
+    duration_sec, interval_ms, num_frames = compute_animation_timing(bodies)
+    t_anim = np.linspace(t_start, t_end, num_frames)
+    
+    # -------------------------------------------------
+    # Create artists
+    # -------------------------------------------------
     lines = []
-    scatters = []
+    markers = []
+
     for b in bodies:
         line, = ax.plot([], [],
-                        label=f"{b.name} Trajectory",
-                        color=getattr(b.visual_properties, "bodyColor", "white"),
-                        linewidth=getattr(b.visual_properties, "lineWidth", 1.0),
-                        zorder=50)
-        scatter = ax.scatter([], [],
-                             label=b.name,
-                             c=[getattr(b.visual_properties, "bodyColor", "white")],
-                             edgecolor=getattr(b.visual_properties, "edgeColor", "k"),
-                             s=getattr(b.visual_properties, "size", 20),
-                             marker=getattr(b.visual_properties, "icon", "o"),
-                             linewidths=getattr(b.visual_properties, "lineWidth", 1.0),
-                             zorder=60)
-        lines.append(line)
-        scatters.append(scatter)
+                        linewidth=b.VisualProperties.lineWidth,
+                        color=b.VisualProperties.lineColor)
 
-    def update(frame_idx):
-        current_idx = frame_idx * frame_step
+        marker, = ax.plot([], [],
+                          marker=b.VisualProperties.icon,
+                          color=b.VisualProperties.lineColor,
+                          markersize=0.75 * np.sqrt(b.VisualProperties.size),
+                          linestyle='None')
+
+        lines.append(line)
+        markers.append(marker)
+
+    # -------------------------------------------------
+    # Trail buffers (bounded)
+    # -------------------------------------------------
+    MAX_TRAIL = 500
+    trails = [{"x": [], "y": []} for _ in bodies]
+
+    # -------------------------------------------------
+    # Frame update
+    # -------------------------------------------------
+    def update(frame):
+        t = t_anim[frame]
         artists = []
-        for i, hist in enumerate(histories):
-            idx = min(current_idx, len(hist) - 1)
-            slice_ = hist[: idx + 1]
-            # ensure numeric floats for matplotlib
-            xs = [float(x) for x in slice_[:, 0]]
-            ys = [float(y) for y in slice_[:, 1]]
-            lines[i].set_data(xs, ys)
-            scatters[i].set_offsets([[float(slice_[-1, 0]), float(slice_[-1, 1])]])
-            artists.append(lines[i])
-            artists.append(scatters[i])
-        ax.relim()
-        ax.autoscale_view()
-        return tuple(artists)
+
+        for i, b in enumerate(bodies):
+            state = b.StateProperties.state_at_time(t)
+            x, y = state[0], state[1]
+
+            trails[i]["x"].append(x)
+            trails[i]["y"].append(y)
+
+            if len(trails[i]["x"]) > MAX_TRAIL:
+                trails[i]["x"] = trails[i]["x"][-MAX_TRAIL:]
+                trails[i]["y"] = trails[i]["y"][-MAX_TRAIL:]
+
+            lines[i].set_data(trails[i]["x"], trails[i]["y"])
+            markers[i].set_data([x], [y])
+
+            artists.extend([lines[i], markers[i]])
+
+        return artists
 
     ani = FuncAnimation(
-        Figure_Object.figure,
+        fig,
         update,
-        frames=range(num_frames),
+        frames=num_frames,
         interval=interval_ms,
-        blit=True,
+        blit=False,
         repeat=True
     )
+
     return ani
+
+def compute_animation_timing(bodies,
+                             target_fps=60,
+                             min_duration=6.0,
+                             max_duration=20.0,
+                             min_interval_ms=10,
+                             max_interval_ms=50):
+    """
+    Automatically compute duration_sec and interval_ms for smooth animation.
+
+    Returns:
+        duration_sec, interval_ms, num_frames
+    """
+
+    # Determine common time span
+    t_start = max(b.StateProperties.times[0] for b in bodies)
+    t_end   = min(b.StateProperties.times[-1] for b in bodies)
+
+    sim_span = max(1e-6, t_end - t_start)
+
+    # Frame budget
+    # More simulation time → longer animation, but capped
+    duration_sec = np.clip(
+        sim_span / (24 * 3600),  # 1 day of sim ≈ 1 sec of animation
+        min_duration,
+        max_duration
+    )
+
+    # FPS selection
+    interval_ms = int(1000 / target_fps)
+    interval_ms = int(np.clip(interval_ms, min_interval_ms, max_interval_ms))
+
+    num_frames = int(duration_sec * 1000 / interval_ms)
+
+    return duration_sec, interval_ms, num_frames

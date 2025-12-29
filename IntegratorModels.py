@@ -1,6 +1,11 @@
 import numpy as np
 
-class RK4Integrator:
+class baseIntegrator():
+    pass
+class baseDynamics():
+    pass
+
+class RK4Integrator(baseIntegrator):
     def step(self, deriv_func, state, time, dt):
         k1 = deriv_func(state, time)
         k2 = deriv_func(state + 0.5 * dt * k1, time + 0.5 * dt)
@@ -9,7 +14,23 @@ class RK4Integrator:
         new_state = state + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4)
         return new_state
 
-class DOPRI5Integrator:
+class AdaptiveRK4Integrator(baseIntegrator):
+    def step(self, deriv_func, state, time, dt, absTol = 1E-12, relTol = 1E-12):
+        k1 = deriv_func(state, time)
+        k2 = deriv_func(state + 0.5*dt*k1, time + 0.5*dt)
+        k3 = deriv_func(state + 0.5*dt*k2, time + 0.5*dt)
+        k4 = deriv_func(state + dt*k3, time + dt)
+
+        x4 = state + dt*(k1 + 2*k2 + 2*k3 + k4)/6
+        x3 = state + dt*(k1 + 4*k2 + k3)/6  # embedded estimate
+
+        err = np.linalg.norm(x4 - x3)
+        tol = absTol + relTol*np.linalg.norm(x4)
+
+        return x4, err, tol
+
+class DOPRI5Integrator(baseIntegrator):
+
     def step(self, deriv_func, state, time, dt):
         k1 = deriv_func(state, time)
 
@@ -52,7 +73,14 @@ class DOPRI5Integrator:
 
         return new_state
 
-class Dynamics:
+class EphemerisIntegrator(baseIntegrator):
+    def __init__(self, ephemeris_func):
+        self.ephemeris_func = ephemeris_func
+
+    def step(self, deriv_func, state, time, dt):
+        return self.ephemeris_func(time + dt)
+
+class Dynamics(baseDynamics):
     def __init__(self, forces):
         self.forces = forces
 
