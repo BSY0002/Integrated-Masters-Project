@@ -9,7 +9,6 @@ class RK4Integrator():
         new_state = state + (dt / 6.0) * (k1 + 2*k2 + 2*k3 + k4)
         return new_state
 
-
 class AdaptiveRK45Integrator():
     """
     Adaptive Runge-Kutta 4(5) integrator (Dormand-Prince)
@@ -57,16 +56,6 @@ class AdaptiveRK45Integrator():
         tol = absTol + relTol * np.linalg.norm(x5)
 
         return x5, err, tol
-
-
-
-
-
-
-
-
-
-
 
 class EphemerisIntegrator():
     def __init__(self, ephemeris_func):
@@ -132,7 +121,6 @@ class AttitudeDynamics:
             Derivative of state
         """
         q = state[0:4]  # quaternion
-        q = renormalize_quaternion_inplace(q)  # <-- normalize here
 
         w = state[4:7]  # angular velocity
 
@@ -152,17 +140,3 @@ class AttitudeDynamics:
         dxdt[0:4] = q_dot
         dxdt[4:7] = w_dot
         return dxdt
-
-
-
-# numpy in-place variant
-def renormalize_quaternion_inplace(q, tol=1e-12):
-    # a is a length-4 numpy array [w,x,y,z]
-    import numpy as np
-    norm2 = float((q * q).sum())
-    if abs(norm2 - 1.0) < tol:
-        return q
-    inv = 1.0 / np.sqrt(norm2)
-    inv = inv * (1.5 - 0.5 * norm2 * inv * inv)
-    q *= inv
-    return q

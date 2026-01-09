@@ -310,7 +310,7 @@ class StateProperties:
 
         if not self._attitude_times:
             return None
-        times = self.orbit_times
+        times = self._attitude_times
         attitudeStates = self.attitude_stateHistory
 
         if t <= times[0]:

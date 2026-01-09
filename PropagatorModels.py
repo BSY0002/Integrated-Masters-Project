@@ -177,11 +177,9 @@ def Propagate(bodyList, TimeElement):
 
     return bodyList
 
-
 def body_sync_time(SP):
     return min(SP.orbit_latest_time, SP.attitude_latest_time)
 
-# numpy in-place variant
 def renormalize_quaternion_inplace(q, tol=1e-12):
     # a is a length-4 numpy array [w,x,y,z]
     import numpy as np
