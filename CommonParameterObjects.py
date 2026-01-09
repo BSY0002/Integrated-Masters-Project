@@ -12,10 +12,11 @@ class ParameterObject:
         self.parameter_description      = parameter_description
         self.parameter_variable         = parameter_variable
 
-G = ParameterObject(parameter_name          = "Gravitational Constant",
-                    parameter_value         = 6.67430e-20,
-                    parameter_units         = "km^3 / (kg·s^2)",
-                    parameter_description   = "Universal gravitational constant in km^3 / (kg·s^2)",
-                    parameter_variable      = "G")
-
+G = ParameterObject(
+    parameter_name        = "Gravitational Constant",
+    parameter_value       = 6.67430e-11,
+    parameter_units       = "m^3 / (kg·s^2)",
+    parameter_description = "Universal gravitational constant in m^3 / (kg·s^2)",
+    parameter_variable    = "G"
+)
 

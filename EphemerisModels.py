@@ -1,12 +1,15 @@
 import numpy as np
+import CommonParameterObjects
 
 class CircularEphemeris:
     def __init__(self, body, centralBody, epoch=0.0, plane="xy"):
-        self.a = np.linalg.norm(body.StateProperties.stateCurrent[0:3])
+        self.a = np.linalg.norm(body.StateProperties.orbit_stateCurrent[0:3])
         self.mu = centralBody.PhysicalProperties.mu
         self.n = np.sqrt(self.mu / self.a**3)
         self.epoch = epoch
         self.plane = plane
+        body.StateProperties.Period = 2 * np.pi * np.sqrt(self.a**3 / (CommonParameterObjects.G.parameter_value * (centralBody.PhysicalProperties.mass + body.PhysicalProperties.mass)))
+
 
     def __call__(self, t):
         dt = t - self.epoch
@@ -51,23 +54,3 @@ class KeplerianEphemeris:
         v = np.sqrt(self.mu*self.a)/r_p * np.array([-np.sin(E), np.sqrt(1-self.e**2)*np.cos(E), 0])
 
         return np.hstack((r, v))
-
-
-## 
-class TabulatedEphemeris:
-    def __init__(self, times, states):
-        self.times = np.asarray(times)
-        self.states = np.asarray(states)
-
-    def __call__(self, t):
-        if t <= self.times[0]:
-            return self.states[0]
-        if t >= self.times[-1]:
-            return self.states[-1]
-
-        i = np.searchsorted(self.times, t) - 1
-        t0, t1 = self.times[i], self.times[i+1]
-        s0, s1 = self.states[i], self.states[i+1]
-
-        w = (t - t0) / (t1 - t0)
-        return (1 - w)*s0 + w*s1

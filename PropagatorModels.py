@@ -3,114 +3,148 @@ import numpy as np
 import ObjectModels
 import IntegratorModels
 
+
 def Propagate(bodyList, TimeElement):
 
     t_start = TimeElement.startTime
     t_end   = TimeElement.endTime
 
-    # --------------------------------------------------
-    # Initialize all bodies at t_start
-    # --------------------------------------------------
+    # ==================================================
+    # Initialization
+    # ==================================================
     for body in bodyList:
         SP = body.StateProperties
 
-        if SP.latest_time is None:
-            SP.set_state(t_start, SP._stateCurrent)
+        if SP.orbit_latest_time is None:
+            SP.set_orbitState(t_start, SP.orbit_stateCurrent)
 
-        # Ensure collision flag exists
+        if SP.attitude_latest_time is None:
+            SP.set_attitudeState(t_start, SP.attitude_stateCurrent)
+
         if not hasattr(SP, "collided"):
             SP.collided = False
 
-    # --------------------------------------------------
-    # Priority queue: (next_time, uid, body)
-    # --------------------------------------------------
-    pq = []
+    # ==================================================
+    # Priority queue: (next_sync_time, uid, body)
+    # ==================================================
+    pq  = []
     uid = 0
 
     for body in bodyList:
         IP = body.IntegratorProperties
 
-        if IP.integrator is None:
-            continue  # ephemeris / fixed body
+        if not IP.orbit.is_propagated and not IP.attitude.is_propagated:
+            continue
 
-        next_time = body.StateProperties.latest_time + IP.dt
-        heapq.heappush(pq, (next_time, uid, body))
+        t0 = body_sync_time(body.StateProperties)
+        heapq.heappush(pq, (t0 + IP.sync_dt, uid, body))
         uid += 1
 
-    # --------------------------------------------------
+    # ==================================================
     # Event-driven propagation loop
-    # --------------------------------------------------
+    # ==================================================
     while pq:
 
-        next_time, _, body = heapq.heappop(pq)
+        t_target, _, body = heapq.heappop(pq)
 
-        if next_time > t_end:
+        if t_target > t_end:
             break
 
-        IP = body.IntegratorProperties
         SP = body.StateProperties
+        IP = body.IntegratorProperties
 
-        t_body = SP.latest_time
-        dt     = next_time - t_body
+        # ==================================================
+        # ORBIT PROPAGATION
+        # ==================================================
+        if IP.orbit.is_propagated and not SP.collided:
 
-        # --------------------------------------------------
-        # Frozen body after collision
-        # --------------------------------------------------
-        if SP.collided:
-            new_state = SP.stateCurrent.copy()
-            t_new = next_time
+            IPo = IP.orbit
+            t   = SP.orbit_latest_time
+            x   = SP.orbit_stateCurrent.copy()
 
-        else:
-            integrator = IP.integrator
-            dynamics   = IP.dynamics
+            while t < t_target:
 
-            state = SP.state_at_time(t_body)
+                dt = min(IPo.dt, t_target - t)
 
-            # ----------------------------------------------
-            # Adaptive RK4
-            # ----------------------------------------------
-            if isinstance(integrator, IntegratorModels.AdaptiveRK4Integrator):
+                if isinstance(IPo.integrator, IntegratorModels.AdaptiveRK45Integrator):
 
-                dt_try = dt
+                    dt_try = dt
+                    while True:
+                        x_new, err, tol = IPo.integrator.step(
+                            IPo.dynamics, x, t, dt_try,
+                            IPo.absTol, IPo.relTol
+                        )
 
-                while True:
-                    new_state, err, tol = integrator.step(
-                        deriv_func=dynamics,
-                        state=state,
-                        time=t_body,
-                        dt=dt_try,
-                        absTol=IP.absTol,
-                        relTol=IP.relTol
-                    )
+                        if err <= tol:
+                            break
 
-                    if err <= tol:
-                        break
+                        dt_try = max(IPo.dt_min, 0.5 * dt_try)
 
-                    dt_try = max(IP.dt_min, 0.5 * dt_try)
+                    x = x_new
+                    t += dt_try
 
-                t_new = t_body + dt_try
+                    # Adapt step
+                    if err > 0.0:
+                        fac = 0.9 * (tol / err) ** 0.25
+                        IPo.dt = np.clip(fac * dt_try, IPo.dt_min, IPo.dt_max)
+                    else:
+                        IPo.dt = min(IPo.dt_max, 2.0 * dt_try)
 
-                if err < 0.1 * tol:
-                    dt_try = min(IP.dt_max, 1.5 * dt_try)
+                else:
+                    x = IPo.integrator.step(IPo.dynamics, x, t, dt)
+                    t += dt
 
-                IP.dt = dt_try
+            SP.set_orbitState(t_target, x)
 
-            # ----------------------------------------------
-            # Fixed-step integrator
-            # ----------------------------------------------
-            else:
-                new_state = integrator.step(
-                    deriv_func=dynamics,
-                    state=state,
-                    time=t_body,
-                    dt=dt
-                )
-                t_new = t_body + dt
+        # ==================================================
+        # ATTITUDE PROPAGATION
+        # ==================================================
+        if IP.attitude.is_propagated and not SP.collided:
 
-        # --------------------------------------------------
-        # Collision detection
-        # --------------------------------------------------
-        if not SP.collided:
+            IPa = IP.attitude
+            t   = SP.attitude_latest_time
+            q   = SP.attitude_stateCurrent.copy()
+
+            while t < t_target:
+                
+                dt = min(IPa.dt, t_target - t)
+                if isinstance(IPa.integrator, IntegratorModels.AdaptiveRK45Integrator):
+
+                    dt_try = dt
+                    while True:
+                        q_new, err, tol = IPa.integrator.step(
+                            IPa.dynamics, q, t, dt_try,
+                            IPa.absTol, IPa.relTol
+                        )
+
+                        if err <= tol:
+                            break
+
+                        dt_try = max(IPa.dt_min, 0.5 * dt_try)
+
+                    q = renormalize_quaternion_inplace(q_new)  # <-- normalize here
+                    t += dt_try
+
+                    if err > 0.0:
+                        fac = 0.9 * (tol / err) ** 0.25
+                        IPa.dt = np.clip(fac * dt_try, IPa.dt_min, IPa.dt_max)
+                    else:
+                        IPa.dt = min(IPa.dt_max, 2.0 * dt_try)
+
+                else:
+                    q = IPa.integrator.step(IPa.dynamics, q, t, dt)
+                    q = renormalize_quaternion_inplace(q)  # <-- normalize here
+                    t += dt
+
+            SP.set_attitudeState(t_target, q)
+
+        # ==================================================
+        # COLLISION CHECK (SYNCHRONIZED)
+        # ==================================================
+        if not SP.collided and IP.orbit.is_propagated:
+
+            r_body = SP.orbit_state_at_time(t_target)[0:3]
+
             for other in bodyList:
 
                 if other is body:
@@ -125,24 +159,36 @@ def Propagate(bodyList, TimeElement):
                 ):
                     continue
 
-                other_state = other.StateProperties.state_at_time(t_new)
-                r_rel = new_state[0:3] - other_state[0:3]
+                r_other = other.StateProperties.orbit_state_at_time(t_target)[0:3]
 
-                if np.linalg.norm(r_rel) <= other.PhysicalProperties.radius:
+                if np.linalg.norm(r_body - r_other) <= other.PhysicalProperties.radius:
                     SP.collided = True
                     print(f"Collision: {body.name} with {other.name}")
                     break
 
-        # --------------------------------------------------
-        # Commit state (always)
-        # --------------------------------------------------
-        SP.set_state(t_new, new_state)
-        print(body.name + " : " + str(next_time) + " / " + str(t_end))
-        # --------------------------------------------------
-        # Schedule next event
-        # --------------------------------------------------
-        next_time = SP.latest_time + IP.dt
+        # ==================================================
+        # Schedule next synchronization
+        # ==================================================
+        next_time = t_target + IP.sync_dt
         heapq.heappush(pq, (next_time, uid, body))
         uid += 1
 
+        print(f"{body.name} : {100.0 * t_target / t_end:.2f}%")
+
     return bodyList
+
+
+def body_sync_time(SP):
+    return min(SP.orbit_latest_time, SP.attitude_latest_time)
+
+# numpy in-place variant
+def renormalize_quaternion_inplace(q, tol=1e-12):
+    # a is a length-4 numpy array [w,x,y,z]
+    import numpy as np
+    norm2 = float((q * q).sum())
+    if abs(norm2 - 1.0) < tol:
+        return q
+    inv = 1.0 / np.sqrt(norm2)
+    inv = inv * (1.5 - 0.5 * norm2 * inv * inv)
+    q *= inv
+    return q

@@ -1,6 +1,4 @@
 from typing import Optional
-import IntegratorModels
-
 import numpy as np
 
 ## Standard Object Classes ##
@@ -16,7 +14,7 @@ class CelestialBody(GeneralObject):
         self.StateProperties = StateProperties()
         self.PhysicalProperties = PhysicalProperties()
         self.VisualProperties = VisualProperties()
-        self.IntegratorProperties = IntegratorProperties()
+        self.IntegratorProperties = BodyIntegratorProperties()
 
 class SpaceVehicle(CelestialBody):
     def __init__(self, name : str):
@@ -39,11 +37,13 @@ class Earth(Planet):
         self.SOI  = 9.24e8    # meters
 
         ## Set the State Properties ##
-        state = np.array([0,0,0,0,0,0])
-        
+        orbitState = np.array([0,0,0,0,0,0])
+        attitudeState = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.2921159e-5])
+        #7.2921159e-5
         # Set initial state
-        self.StateProperties.set_state(0, state)
-
+        self.StateProperties.set_attitudeState(0,attitudeState)
+        self.StateProperties.set_orbitState(0, orbitState)
+        
         ## Set the Visual Properties ##
         self.VisualProperties.bodyColor   = "#1313C9"
         self.VisualProperties.edgeColor   = "#000000"
@@ -65,13 +65,13 @@ class Moon(Planet):
 
         ## State Properties (Earth-centered inertial frame) ##
         # Moon at average distance from Earth
-        state = np.array([
+        orbitState = np.array([
             384400e3, 0.0, 0.0,   # x, y, z position (m)
             0.0, 1022.0, 0.0       # vx, vy, vz velocity (m/s)
         ])
 
         # Set initial state
-        self.StateProperties.set_state(0, state)
+        self.StateProperties.set_orbitState(0, orbitState)
 
         ## Set the Visual Properties (Moon) ##
         self.VisualProperties.bodyColor   = "#888888"
@@ -87,13 +87,20 @@ class LunarSpaceVehicle(SpaceVehicle):
 
         ## State Properties (Earth-centered inertial frame) ##
         # 10,000 km behind Moon toward Earth
-        state = np.array([
+        orbitState = np.array([
                                 386237000.0+10000000, 0.0, 0.0,   # position (m)
                                 0.0, 1500, 0.0           # velocity (m/s)
                                 ])
-        
+        orbitState = np.array([
+        4.57e7,     # x  (m)
+        -6.14e6,     # y  (m)
+        0.0,        # z  (m)
+        4.90e2,     # vx (m/s)
+        3.65e3,     # vy (m/s)
+        0.0         # vz (m/s)
+        ])
         # Set initial state
-        self.StateProperties.set_state(0, state)
+        self.StateProperties.set_orbitState(0, orbitState)
 
         ## Set the Visual Properties ##
         self.VisualProperties.bodyColor   = "#000000"
@@ -109,7 +116,7 @@ class LEOSpaceVehicle(SpaceVehicle):
 
         ## State Properties (Earth-centered inertial frame) ##
         X = 6378137.0 + 150000
-        state  = np.array([
+        orbitState  = np.array([
                                             X,
                                             0.0,
                                             0.0,
@@ -117,8 +124,11 @@ class LEOSpaceVehicle(SpaceVehicle):
                                             np.sqrt(3.986004418e14 / X),
                                             0.0
                                         ])
+        attitudeState = np.array([1.0, 0.0, 0.0, 0.0, 0, 0, 5E-2])
+
         # Set initial state
-        self.StateProperties.set_state(0, state)
+        self.StateProperties.set_orbitState(0, orbitState)
+        self.StateProperties.set_attitudeState(0, attitudeState)
 
         ## Set the Visual Properties ##
         self.VisualProperties.bodyColor   = "#000000"
@@ -134,7 +144,7 @@ class MEOSpaceVehicle(SpaceVehicle):
 
         ## State Properties (Earth-centered inertial frame) ##
         # 10,000 km behind Moon toward Earth
-        state = np.array([
+        orbitState = np.array([
                                     26578137.0,
                                     0.0,
                                     0.0,
@@ -143,7 +153,7 @@ class MEOSpaceVehicle(SpaceVehicle):
                                     0.0
                                 ])
         # Set initial state
-        self.StateProperties.set_state(0, state)
+        self.StateProperties.set_orbitState(0, orbitState)
 
         ## Set the Visual Properties ##
         self.VisualProperties.bodyColor   = "#000000"
@@ -159,7 +169,7 @@ class GEOSpaceVehicle(SpaceVehicle):
 
         ## State Properties (Earth-centered inertial frame) ##
         # 10,000 km behind Moon toward Earth
-        state = np.array([
+        orbitState = np.array([
                                             42164137.0,
                                             0.0,
                                             0.0,
@@ -168,7 +178,7 @@ class GEOSpaceVehicle(SpaceVehicle):
                                             0.0
                                         ])
         # Set initial state
-        self.StateProperties.set_state(0, state)
+        self.StateProperties.set_orbitState(0, orbitState)
 
         ## Set the Visual Properties ##
         self.VisualProperties.bodyColor   = "#000000"
@@ -186,6 +196,9 @@ class PhysicalProperties:
         self.radius = 0.0
         self.mu = 0.0
         self.SOI = 0.0
+        self.inertia = np.array([[1.0, 0.,   0.,  ],
+                                [0.,   1.0, 0.  ],
+                                [0.,   0.,   1.0]])
 
 class VisualProperties:
     def __init__(self):
@@ -199,69 +212,141 @@ class VisualProperties:
 
 class StateProperties:
     def __init__(self):
-        self._times = []
-        self._states = []
-        self._stateCurrent = None
+        
+        # Time - As of right now, this should be the same for att and orbit states
+        # ignore the above statement, need to split into seperate times
+        #self._times = []
+        self._attitude_times = []
+        self._orbit_times = []
+
+        # Orbit States - [x y z dx dy dz]
+        self._orbit_states = [] 
+        self._orbit_stateCurrent = None
+
+        # Attitude States - [q0 q1 q2 q3 wx wy wz]
+        self._attitude_states = []   
+        self._attitude_stateCurrent = None
+
+## ORBIT STATE
+    @property
+    def orbit_latest_time(self):
+        return self._orbit_times[-1]
+    
+    @property
+    def orbit_times(self):
+        return np.asarray(self._orbit_times)
+
 
     @property
-    def stateCurrent(self):
-        return self._stateCurrent
+    def orbit_stateCurrent(self):
+        return self._orbit_stateCurrent
 
     @property
-    def times(self):
-        return np.asarray(self._times)
-
-    @property
-    def stateHistory(self):
-        return np.vstack(self._states)
-
-    @property
-    def latest_time(self):
-        if not self._times:
-            return None
-        return self._times[-1]
-
-    def set_state(self, time, state):
-        state = np.asarray(state, dtype=float)
+    def orbit_stateHistory(self):
+        return np.vstack(self._orbit_states)
+    
+    def set_orbitState(self, time, orbitState):
+        
+        orbitState = np.asarray(orbitState, dtype=float)
 
         # enforce monotonic time
-        if self._times and time <= self._times[-1]:
+        if self._orbit_times and time <= self._orbit_times[-1]:
             return
 
-        self._times.append(float(time))
-        self._states.append(state.copy())
-        self._stateCurrent = state
+        self._orbit_times.append(float(time))
+        self._orbit_states.append(orbitState.copy())
+        self._orbit_stateCurrent = orbitState
 
-    def state_at_time(self, t):
-        times = self.times
-        states = self.stateHistory
+    def orbit_state_at_time(self, t):
+        if not self._orbit_times:
+            return None
+
+        times = self.orbit_times
+        orbitStates = self.orbit_stateHistory
 
         if t <= times[0]:
-            return states[0]
+            return orbitStates[0]
 
         if t >= times[-1]:
-            return states[-1]
+            return orbitStates[-1]
 
         i = np.searchsorted(times, t) - 1
         t0, t1 = times[i], times[i + 1]
-        s0, s1 = states[i], states[i + 1]
+        s0, s1 = orbitStates[i], orbitStates[i + 1]
 
         alpha = (t - t0) / (t1 - t0)
         return (1 - alpha) * s0 + alpha * s1
 
+## ATTITUDE STATE
+    @property
+    def attitude_latest_time(self):
+        if not self._attitude_times:
+            return None
+        return self._attitude_times[-1]
+    
+    @property
+    def attitude_times(self):
+        return np.asarray(self._attitude_times)
 
-class IntegratorProperties:
+
+
+    @property
+    def attitude_stateCurrent(self):
+        return self._attitude_stateCurrent
+
+    @property
+    def attitude_stateHistory(self):
+        return np.vstack(self._attitude_states)
+    
+    def set_attitudeState(self, time, attitudeState):
+        attitudeState = np.asarray(attitudeState, dtype=float)
+        if self._attitude_times and time <= self._attitude_times[-1]:
+            return
+        self._attitude_times.append(float(time))
+        self._attitude_states.append(attitudeState.copy())
+        self._attitude_stateCurrent = attitudeState
+
+    def attitude_state_at_time(self, t):
+
+        if not self._attitude_times:
+            return None
+        times = self.orbit_times
+        attitudeStates = self.attitude_stateHistory
+
+        if t <= times[0]:
+            return attitudeStates[0]
+
+        if t >= times[-1]:
+            return attitudeStates[-1]
+
+        i = np.searchsorted(times, t) - 1
+        t0, t1 = times[i], times[i + 1]
+        s0, s1 = attitudeStates[i], attitudeStates[i + 1]
+
+        alpha = (t - t0) / (t1 - t0)
+        return (1 - alpha) * s0 + alpha * s1
+
+class BodyIntegratorProperties:
     def __init__(self):
-        self.integrator = IntegratorModels.baseIntegrator()
-        self.dynamics   = IntegratorModels.baseDynamics()
+        self.orbit    = IndividualIntegratorProperties()
+        self.attitude = IndividualIntegratorProperties()
 
-        self.absTol = 1e-6
-        self.relTol = 1e-6
+        # synchronization cadence (physical time)
+        self.sync_dt = 1
 
-        self.dt      = 10.0     # current step
+class IndividualIntegratorProperties:
+    def __init__(self):
+        self.integrator: Optional[object] = None
+        self.dynamics: Optional[object] = None
+
+        self.absTol = 1e-12
+        self.relTol = 1e-12
+
+        self.dt      = 10     # current step
         self.dt_min  = .01
-        self.dt_max  = 3600.0
+        self.dt_max  = 1000
 
     @property
     def is_propagated(self):
         return self.integrator is not None and self.dynamics is not None
+    
