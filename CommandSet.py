@@ -1,72 +1,55 @@
-import time
-from RealTimePropagator import initialize_heap
+# CommandSet.py
 import numpy as np
 
-# =======================================================
-# Planetary Bodies
-# =======================================================
-class Commands_Simulation():
-    def play(self, RealTimePropagator):
-        if not RealTimePropagator.stopped:
-            RealTimePropagator.running = True
-            RealTimePropagator.last_wall_time = time.perf_counter()
 
-    def pause(self, RealTimePropagator):
-        RealTimePropagator.running = False
-
-    def stop(self, RealTimePropagator):
-        RealTimePropagator.running = False
-        RealTimePropagator.stopped = True
-
-    def set_speed(self, RealTimePropagator, speed):
-        RealTimePropagator.speed = float(speed)
-
-    def reset_propagation(self, bodyList):
-        """
-        Clear all future integration events and restart propagation
-        from the current states.
-        """
-        self.pq, self.uid = initialize_heap(bodyList)
+# ======================================================
+# Base Command Set (optional, for typing/structure)
+# ======================================================
+class BaseCommandSet:
+    pass
 
 
+# ======================================================
+# Simulation Command Set
+# ======================================================
+class SimulationCommandSet(BaseCommandSet):
+    def play(self, command, simulator):
+        if not simulator.stopped:
+            simulator.running = True
 
-# =======================================================
-# Spacecraft Commands
-# =======================================================
-class SpacecraftCommands():
-    def impulsive_burn(self, rt, body, dv):
-        SP = body.StateProperties
-        t = rt.sim_time
+    def pause(self, command, simulator):
+        simulator.running = False
 
-        # --------------------
-        # Physics
-        # --------------------
+    def set_speed(self, command, simulator):
+        speed = float(command.arguments.get("speed", 1.0))
+        simulator.speed = speed
+# ======================================================
+# Spacecraft Command Set
+# ======================================================
+class SpacecraftCommandSet(BaseCommandSet):
+    """
+    Operational spacecraft commands
+    """
+
+    def perform_maneuver(self, command, simulator, spacecraft):
+        dv = np.array(command.arguments["dv"], dtype=float)
+        t = simulator.sim_time
+
+        SP = spacecraft.StateProperties
         state = SP.orbit_state_at_time(t).copy()
-        state[3:6] += np.array(dv)
-        SP.set_orbitState(t, state)
-        rt.reset_propagation()
+        state[3:6] += dv
 
-    def Perform_Maneuver(self):
+        SP.set_orbitState(t, state)
+        simulator.reset_propagation()
+
+    def perform_attitude_change(self, command, simulator, spacecraft):
         pass
-    def Perform_AttitudeChangeManeuver(self):
+
+    def enter_safe_mode(self, command, simulator, spacecraft):
         pass
-    def Perform_ReactionWheelDesaturation(self):
-        pass
-    def Perform_Communications(self):
-        pass
-    def Perform_Destruction(self):
-        pass
-    def Perform_Downlink(self):
-        pass
-    def Perform_Crosslink(self):
-        pass
-    def Perform_CommandCancel(self):
-        pass
-    def Perform_StationKeeping(self):
-        pass
-    def Perform_SafeMode(self):
-        pass
-    def Perform_StartUp(self):
-        pass
-    def Perform_BuiltInTest(self):
-        pass
+
+# ======================================================
+# Planet Command Set
+# ======================================================
+class PlanetCommandSet(BaseCommandSet):
+    pass

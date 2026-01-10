@@ -4,8 +4,13 @@ import matplotlib.pyplot as plt
 import RealTimePropagator
 import numpy as np
 import ExampleObjectClasses
+from CommandModule import CommandModule
+from ObjectModels import SimulationObject
 
 plt.ion()
+
+# Create simulation
+sim = SimulationObject("sim")
 
 # ======================================
 # Create bodies
@@ -50,11 +55,19 @@ AdvSatellite.VisualProperties.lineColor = "#CC1100"
 AdvSatellite.VisualProperties.edgeColor = "#CC1100"
 
 
+# Command module
+cmd_module = CommandModule(sim, [LEOSatellite])
+
 # ======================================
 # Run
 # ======================================
 bodyList = [Earth, LEOSatellite, AdvSatellite]
-rt = RealTimePropagator.RealTimePropagator(bodyList)
-rt.RunRealTimeSimulation()
 
+rt = RealTimePropagator.RealTimePropagatorObject(bodyList)
+
+# Pass the SimulationObject to CommandModule, and store propagator reference
+rt.CommandModule = CommandModule(rt.simulation, bodyList)
+rt.CommandModule.propagator = rt  # store reference for sim_time access
+
+rt.RunRealTimeSimulation()
 plt.show(block=True)

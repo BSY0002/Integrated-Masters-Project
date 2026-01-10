@@ -1,8 +1,18 @@
 from typing import Optional
 import numpy as np
+import CommandSet
 
+## Simulation Object ##
+class SimulationObject:
+    def __init__(self, name: str):
+        self.name = name
+        self.running = False
+        self.stopped = False
+        self.speed = 1.0
+        self.CommandProperties = CommandProperties(CommandSet.SimulationCommandSet)
+        
 ## Standard Object Classes ##
-class GeneralObject:
+class GeneralObject():
     def __init__(self, name : str):
         self.name : str = name
         self.description : Optional[str] = None
@@ -15,15 +25,17 @@ class CelestialBody(GeneralObject):
         self.PhysicalProperties = PhysicalProperties()
         self.VisualProperties = VisualProperties()
         self.IntegratorProperties = BodyIntegratorProperties()
+        self.CommandProperties = CommandProperties(command_set = CommandSet.PlanetCommandSet)
 
 class SpaceVehicle(CelestialBody):
     def __init__(self, name : str):
         super().__init__(name)
+        self.CommandProperties = CommandProperties(command_set = CommandSet.SpacecraftCommandSet)
+
 
 class Planet(CelestialBody):
     def __init__(self, name : str):
         super().__init__(name)
-
 
 ## Standard Property Set Classes ##
 class PhysicalProperties:
@@ -129,8 +141,6 @@ class StateProperties:
     def attitude_times(self):
         return np.asarray(self._attitude_times)
 
-
-
     @property
     def attitude_stateCurrent(self):
         return self._attitude_stateCurrent
@@ -190,4 +200,21 @@ class IndividualIntegratorProperties:
     @property
     def is_propagated(self):
         return self.integrator is not None and self.dynamics is not None
-    
+
+class CommandProperties:
+    def __init__(self, command_set):
+        # Instantiate the command set class if it's a class, otherwise use directly
+        if isinstance(command_set, type):
+            self.command_set = command_set()
+        else:
+            self.command_set = command_set
+
+    def has_command(self, name: str) -> bool:
+        return hasattr(self.command_set, name)
+
+    def execute(self, command, simulator, owner):
+        handler = getattr(self.command_set, command.command_name, None)
+        if handler:
+            handler(command, simulator)
+        else:
+            print(f"Unknown command: {command.command_name}")
