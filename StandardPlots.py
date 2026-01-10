@@ -62,7 +62,6 @@ class FigureObject:
         if self.axis_equal:
             self.ax.set_aspect('equal', adjustable='box')
             
-
 def Plot_Body(Body):
     BodyPlot = plt.scatter(Body.StateProperties.orbit_stateHistory[0, 0], 
                            Body.StateProperties.orbit_stateHistory[0, 1], 
@@ -128,8 +127,6 @@ def Plot_Axes(Body):
         [y0, y0 + axis_scale * z_b[1]],
         color='b', linewidth=2, label='Body Z (proj)'
     )
-
-
 
 def Animate_Trajectories(bodies, Figure_Object):
 
@@ -267,8 +264,6 @@ def compute_animation_timing(bodies,
     num_frames = int(duration_sec * 1000 / interval_ms)
 
     return duration_sec, interval_ms, num_frames
-
-
 
 def quat_to_dcm(q):
     q0, q1, q2, q3 = q

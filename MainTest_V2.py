@@ -1,7 +1,7 @@
 import ForceModels 
 import IntegratorModels
 import TimeModule 
-import ObjectModels
+import ExampleObjectClasses
 import numpy as np
 import PropagatorModels
 import ColorSchemeObjects
@@ -22,8 +22,8 @@ TimeElement = TimeModule.Time()
 TimeElement.endTime = 2551443/10000
 
 ## Create Objects
-Earth = ObjectModels.Earth()
-LEOSatellite = ObjectModels.LEOSpaceVehicle()
+Earth = ExampleObjectClasses.Earth()
+LEOSatellite = ExampleObjectClasses.LEOSpaceVehicle()
 
 ## Create Integrators
 integrator_RK45Adaptive = IntegratorModels.AdaptiveRK45Integrator()

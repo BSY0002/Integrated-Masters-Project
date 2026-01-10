@@ -1,6 +1,7 @@
 import numpy as np
 
 class RK4Integrator():
+    adaptive = False
     def step(self, deriv_func, state, time, dt):
         k1 = deriv_func(state, time)
         k2 = deriv_func(state + 0.5 * dt * k1, time + 0.5 * dt)
@@ -10,6 +11,8 @@ class RK4Integrator():
         return new_state
 
 class AdaptiveRK45Integrator():
+    def __init__(self):
+        self.adaptive = True
     """
     Adaptive Runge-Kutta 4(5) integrator (Dormand-Prince)
     Compatible with: step(deriv_func, state, t, dt, absTol, relTol)
@@ -60,6 +63,7 @@ class AdaptiveRK45Integrator():
 class EphemerisIntegrator():
     def __init__(self, ephemeris_func):
         self.ephemeris_func = ephemeris_func
+        self.adaptive = False
 
     def step(self, deriv_func, state, time, dt):
         return self.ephemeris_func(time + dt)
